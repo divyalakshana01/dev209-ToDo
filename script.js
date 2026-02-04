@@ -2,9 +2,18 @@ const API_URL = "http://localhost:3000"; // Update this to your backend URL
 
 // --- 1. COOKIE HELPERS ---
 function setCookie(name, value, days) {
-    const date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/`;
+    if (!value) {
+        console.error("FAILED TO SET COOKIE: Value is empty!");
+        return;
+    }
+    const d = new Date();
+    d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+    const expires = "expires=" + d.toUTCString();
+    
+    // We add path=/ so it works on all your pages
+    document.cookie = `${name}=${value}; ${expires}; path=/; SameSite=Lax`;
+    
+    console.log("SUCCESS: Cookie set ->", document.cookie);
 }
 
 function getCookie(name) {
@@ -35,6 +44,8 @@ function updateUI() {
     }
 }
 
+
+
 // --- 3. API ACTIONS ---
 
 // REGISTER & LOGIN
@@ -62,9 +73,15 @@ document.getElementById('login-form').onsubmit = async (e) => {
         body: JSON.stringify({ username, password })
     });
     const data = await res.json();
+    console.log("Full Login Data:", data);
+
     if (data.token) {
+        // 1. Save the token so we can use it for later API calls
         setCookie('authToken', data.token, 1);
+        // 2. Refresh the UI to hide login and show the list
         updateUI();
+        // 3. Fetch the actual tasks from the server
+        fetchTodos();
     } else {
         alert("Login failed");
     }
@@ -90,29 +107,46 @@ document.getElementById('todo-form').onsubmit = async (e) => {
 
 // READ TODOS
 async function fetchTodos() {
-    const res = await fetch(`${API_URL}/todos`, {
-        headers: { 'Authorization': `Bearer ${getCookie('authToken')}` }
-    });
-    const todos = await res.json();
-    const list = document.getElementById('todo-list');
-    list.innerHTML = '';
+    const token = getCookie('authToken');
+    if (!token) return;
 
-    todos.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-        li.innerHTML = `
-            <span><strong>${todo.title}</strong></span>
-            <small>${todo.description || ''}</small>
-            <div class="todo-controls">
-                <button onclick="toggleComplete('${todo._id}', ${!todo.completed})">
-                    ${todo.completed ? 'Undo' : 'Complete'}
-                </button>
-                <button onclick="editTodo('${todo._id}', '${todo.title}')">Edit</button>
-                <button onclick="deleteTodo('${todo._id}')" class="btn-danger">Delete</button>
-            </div>
-        `;
-        list.appendChild(li);
+    const response = await fetch(`${API_URL}/todos`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
     });
+
+    const todos = await response.json();
+    const listElement = document.getElementById('todo-list');
+    listElement.innerHTML = ''; 
+
+    if (Array.isArray(todos)) {
+        todos.forEach(todo => {
+            const li = document.createElement('li');
+            li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+            
+            // Using todo.id as requested
+            // Wrapped in quotes: '${todo.id}' to handle string IDs safely
+            li.innerHTML = `
+                <div class="todo-info">
+                    <strong style="${todo.completed ? 'text-decoration: line-through; color: #888;' : ''}">
+                        ${todo.title}
+                    </strong>
+                    <p>${todo.description || ''}</p>
+                    <span class="status-badge">${todo.completed ? 'Done' : 'In Progress'}</span>
+                </div>
+                <div class="todo-actions">
+                    <button onclick="toggleComplete('${todo.id}', ${!todo.completed})">
+                        ${todo.completed ? 'Undo' : 'Complete'}
+                    </button>
+                    <button onclick="editTodo('${todo.id}', '${todo.title}')">Edit</button>
+                    <button onclick="deleteTodo('${todo.id}')" class="btn-danger">Delete</button>
+                </div>
+            `;
+            listElement.appendChild(li);
+        });
+    }
 }
 
 // UPDATE & DELETE
