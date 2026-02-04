@@ -130,11 +130,12 @@ async function fetchTodos() {
             // Wrapped in quotes: '${todo.id}' to handle string IDs safely
             li.innerHTML = `
                 <div class="todo-info">
-                    <strong style="${todo.completed ? 'text-decoration: line-through; color: #888;' : ''}">
+                    <strong style="${todo.completed ? 'text-decoration: line-through; color: #bcc0c4;' : ''}">
                         ${todo.title}
                     </strong>
                     <p>${todo.description || ''}</p>
-                    <span class="status-badge">${todo.completed ? 'Done' : 'In Progress'}</span>
+                    <span class="status-badge" style="color: ${todo.completed ? '#42b72a' : '#f0ad4e'}">
+                        ${todo.completed ? 'COMPLETED' : 'PENDING'}</span>
                 </div>
                 <div class="todo-actions">
                     <button onclick="toggleComplete('${todo.id}', ${!todo.completed})">
