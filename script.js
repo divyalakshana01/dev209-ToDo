@@ -124,31 +124,84 @@ async function fetchTodos() {
     if (Array.isArray(todos)) {
         todos.forEach(todo => {
             const li = document.createElement('li');
+            li.id = `item-${todo.id}`; // Unique ID for the row
             li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-            
-            // Using todo.id as requested
-            // Wrapped in quotes: '${todo.id}' to handle string IDs safely
-            li.innerHTML = `
-                <div class="todo-info">
-                    <strong style="${todo.completed ? 'text-decoration: line-through; color: #bcc0c4;' : ''}">
-                        ${todo.title}
-                    </strong>
-                    <p>${todo.description || ''}</p>
-                    <span class="status-badge" style="color: ${todo.completed ? '#42b72a' : '#f0ad4e'}">
-                        ${todo.completed ? 'COMPLETED' : 'PENDING'}</span>
-                </div>
-                <div class="todo-actions">
-                    <button onclick="toggleComplete('${todo.id}', ${!todo.completed})">
-                        ${todo.completed ? 'Undo' : 'Complete'}
-                    </button>
-                    <button onclick="editTodo('${todo.id}', '${todo.title}')">Edit</button>
-                    <button onclick="deleteTodo('${todo.id}')" class="btn-danger">Delete</button>
-                </div>
-            `;
+    
+            // Initial static view
+            renderTodoItem(li, todo);
+    
             listElement.appendChild(li);
         });
     }
 }
+
+// Function for the normal view
+function renderTodoItem(li, todo) {
+    li.innerHTML = `
+        <div class="todo-info">
+            <strong style="${todo.completed ? 'text-decoration: line-through; color: #bcc0c4;' : ''}">
+                ${todo.title}
+            </strong>
+            <p>${todo.description || ''}</p>
+            <span class="status-badge" style="color: ${todo.completed ? '#42b72a' : '#f0ad4e'}">
+                ${todo.completed ? 'COMPLETED' : 'PENDING'}
+            </span>
+        </div>
+        <div class="todo-actions">
+            <button onclick="toggleComplete('${todo.id}', ${!todo.completed})">
+                ${todo.completed ? 'Undo' : 'Complete'}
+            </button>
+            <button onclick="showEditForm('${todo.id}')">Edit</button>
+            <button onclick="deleteTodo('${todo.id}')" class="btn-danger">Delete</button>
+        </div>
+    `;
+}
+
+// Function to switch into the Edit Form view
+async function showEditForm(id) {
+    const li = document.getElementById(`item-${id}`);
+    
+    // Extract current text to pre-fill the form
+    const currentTitle = li.querySelector('strong').innerText;
+    const currentDesc = li.querySelector('p').innerText;
+
+    li.innerHTML = `
+        <div class="edit-form-inline">
+            <input type="text" id="edit-title-${id}" value="${currentTitle}" class="inline-edit-input">
+            <textarea id="edit-desc-${id}" class="inline-edit-input">${currentDesc}</textarea>
+            <div class="todo-actions">
+                <button onclick="saveEdit('${id}')" class="btn-success">Save</button>
+                <button onclick="fetchTodos()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    `;
+}
+
+async function saveEdit(id) {
+    const newTitle = document.getElementById(`edit-title-${id}`).value;
+    const newDesc = document.getElementById(`edit-desc-${id}`).value;
+    const token = getCookie('authToken');
+
+    const res = await fetch(`${API_URL}/todos/${id}`, {
+        method: 'PUT',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token 
+        },
+        body: JSON.stringify({ 
+            title: newTitle, 
+            description: newDesc 
+        })
+    });
+
+    if (res.ok) {
+        fetchTodos(); // Refresh to show updated data
+    } else {
+        alert("Failed to save changes.");
+    }
+}
+
+
 
 // UPDATE & DELETE
 async function toggleComplete(id, status) {
