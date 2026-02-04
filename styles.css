@@ -124,3 +124,26 @@ button {
     padding: 6px 12px;
     font-size: 12px;
 }
+
+.edit-form-inline {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inline-edit-input {
+    margin-bottom: 0;
+    font-size: 14px;
+    padding: 8px;
+}
+
+.btn-success {
+    background-color: #42b72a;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #f0f2f5;
+    color: #606770;
+}
